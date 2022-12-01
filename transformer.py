@@ -7,20 +7,20 @@ from flax import linen as nn
 from flax.training import train_state, checkpoints
 
 class PositionEmbedding(nn.Module):
-    def __init__(self, hidden_size) -> None:
+    def setup(self, hidden_size) -> None:
         pass
 
-    def forward(self, inputs, start=1):
+    def __call__(self, inputs, start=1):
         pass
 
-class TransformerFeedForward(nn.Module):
-    def __init__(self, input_size,
+class TransformerFeed__call__(nn.Module):
+    def setup(self, input_size,
                  filter_size,
                  hidden_size,
                  dropout):
         pass
 
-    def forward(self, inputs):
+    def __call__(self, inputs):
         pass
 
 class TransformerDecoderBlock(nn.Module):
@@ -33,7 +33,7 @@ class TransformerDecoderBlock(nn.Module):
     :return: output: Tensor with same shape as decoder_inputs
     """
 
-    def __init__(self,
+    def setup(self,
                  input_size,
                  n_heads,
                  filter_size,
@@ -41,7 +41,7 @@ class TransformerDecoderBlock(nn.Module):
                  dropout = None) -> None:
         pass
 
-    def forward(self, decoder_inputs, encoder_outputs, self_attention_mask=None, cross_attention_mask=None):
+    def __call__(self, decoder_inputs, encoder_outputs, self_attention_mask=None, cross_attention_mask=None):
         pass
 
 class TransformerDecoder(nn.Module):
@@ -50,7 +50,7 @@ class TransformerDecoder(nn.Module):
         followed by attention on source sequence. Defaults to 6 layers of self-attention.
     """
 
-    def __init__(self,
+    def setup(self,
                  embedding_layer,
                  output_layer,
                  n_layers,
@@ -62,7 +62,7 @@ class TransformerDecoder(nn.Module):
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def forward(self, target_input, encoder_output, encoder_mask=None, decoder_mask=None, mask_future=False,
+    def __call__(self, target_input, encoder_output, encoder_mask=None, decoder_mask=None, mask_future=False,
         shift_target_sequence_right=False):
         """
             Args:
@@ -103,7 +103,7 @@ class TransformerDecoder(nn.Module):
         
 class TransformerInputEmbedding(nn.Module):
 
-    def __init__(self,
+    def setup(self,
                  embed_size,
                  vocab_size = None,
                  dropout = None,
@@ -111,12 +111,12 @@ class TransformerInputEmbedding(nn.Module):
                  embedding_initializer=None) -> None:
         pass
 
-    def forward(self, inputs, start=1):
+    def __call__(self, inputs, start=1):
         pass
 
 class Transformer(nn.Module):
 
-    def __init__(self,
+    def setup(self,
                  vocab_size = None,
                  n_layers = 6,
                  n_heads = 8,
@@ -127,5 +127,5 @@ class Transformer(nn.Module):
                  **kwargs) -> None:
         pass
 
-    def forward(self, source_sequence, target_sequence, encoder_mask, decoder_mask, mask_future=True, shift_target_sequence_right=True):
+    def __call__(self, source_sequence, target_sequence, encoder_mask, decoder_mask, mask_future=True, shift_target_sequence_right=True):
         pass

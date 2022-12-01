@@ -11,10 +11,10 @@ class AttentionQKV(nn.Module):
     Computes attention based on provided similarity metric.
     """
 
-    def __init__(self):
+    def setup(self):
         pass
 
-    def forward(self, queries, keys, values, mask=None):
+    def __call__(self, queries, keys, values, mask=None):
         """Fast scaled dot product attention.
 
             :param queries: Tensor with shape [batch_size, heads (optional), n_queries, depth_k]
@@ -29,7 +29,7 @@ class AttentionQKV(nn.Module):
 
 class MultiHeadProjection(nn.Module):
 
-    def __init__(self, n_heads, feature_sizes):
+    def setup(self, n_heads, feature_sizes):
         """Map the multi-headed attention across the map
 
         Arguments:
@@ -40,7 +40,7 @@ class MultiHeadProjection(nn.Module):
 
         pass
 
-    def forward(self, inputs, mask=None):
+    def __call__(self, inputs, mask=None):
         """Fast multi-head attention.
 
         :param queries: Tensor with shape [batch_size, n_queries, depth_k]
@@ -64,11 +64,11 @@ class MultiHeadAttention(nn.Module):
     https://arxiv.org/pdf/1706.03762.pdf
     """
 
-    def __init__(self, n_heads, input_shapes):
+    def setup(self, n_heads, input_shapes):
         pass
 
 
-    def forward(self, inputs, mask=None):
+    def __call__(self, inputs, mask=None):
         """Fast multi-head self attention.
 
             :param inputs: tuple of (query_antecedent, memory_antecedent)
