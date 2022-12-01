@@ -1,4 +1,12 @@
-class AttentionQKV():
+import jax
+import jax.numpy as jnp
+from jax import random
+
+import flax
+from flax import linen as nn
+from flax.training import train_state, checkpoints
+
+class AttentionQKV(nn.Module):
     """
     Computes attention based on provided similarity metric.
     """
@@ -19,7 +27,7 @@ class AttentionQKV():
         pass
 
 
-class MultiHeadProjection():
+class MultiHeadProjection(nn.Module):
 
     def __init__(self, n_heads, feature_sizes):
         """Map the multi-headed attention across the map
@@ -49,7 +57,7 @@ class MultiHeadProjection():
     def _combine_heads(self, tensor):
         pass
 
-class MultiHeadAttention():
+class MultiHeadAttention(nn.Module):
     """
     Fast multi-head attention. Based on the Attention is All You Need paper.
 
