@@ -1,11 +1,19 @@
-class PositionEmbedding():
+import jax
+import jax.numpy as jnp
+from jax import random
+
+import flax
+from flax import linen as nn
+from flax.training import train_state, checkpoints
+
+class PositionEmbedding(nn.Module):
     def __init__(self, hidden_size) -> None:
         pass
 
     def forward(self, inputs, start=1):
         pass
 
-class TransformerFeedForward():
+class TransformerFeedForward(nn.Module):
     def __init__(self, input_size,
                  filter_size,
                  hidden_size,
@@ -15,7 +23,7 @@ class TransformerFeedForward():
     def forward(self, inputs):
         pass
 
-class TransformerDecoderBlock():
+class TransformerDecoderBlock(nn.Module):
     """A decoding block from the paper Attention Is All You Need (https://arxiv.org/pdf/1706.03762.pdf).
 
     :param inputs: two Tensors encoder_outputs, decoder_inputs
@@ -36,7 +44,7 @@ class TransformerDecoderBlock():
     def forward(self, decoder_inputs, encoder_outputs, self_attention_mask=None, cross_attention_mask=None):
         pass
 
-class TransformerDecoder():
+class TransformerDecoder(nn.Module):
     """
         Stack of TransformerDecoderBlocks. Performs initial embedding to d_model dimensions, then repeated self-attention
         followed by attention on source sequence. Defaults to 6 layers of self-attention.
@@ -93,7 +101,7 @@ class TransformerDecoder():
         pass
         
         
-class TransformerInputEmbedding():
+class TransformerInputEmbedding(nn.Module):
 
     def __init__(self,
                  embed_size,
@@ -106,7 +114,7 @@ class TransformerInputEmbedding():
     def forward(self, inputs, start=1):
         pass
 
-class Transformer():
+class Transformer(nn.Module):
 
     def __init__(self,
                  vocab_size = None,
