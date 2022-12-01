@@ -13,7 +13,7 @@ class PositionEmbedding(nn.Module):
     def __call__(self, inputs, start=1):
         pass
 
-class TransformerFeed__call__(nn.Module):
+class TransformerFeedForward(nn.Module):
     def setup(self, input_size,
                  filter_size,
                  hidden_size,
@@ -39,10 +39,17 @@ class TransformerDecoderBlock(nn.Module):
                  filter_size,
                  hidden_size,
                  dropout = None) -> None:
-        pass
+        self.norm_1 = nn.LayerNorm(input_size)
+        self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
+        self.norm_2 = nn.LayerNorm(input_size)
+        self.feed_forward = TransformerFeedForward(input_size, filter_size, hidden_size, dropout)
 
-    def __call__(self, decoder_inputs, encoder_outputs, self_attention_mask=None, cross_attention_mask=None):
-        pass
+    def __call__(self, inputs, self_attention_mask=None):
+        norm_inputs = self.norm_1(inputs)
+        attention = self.attention(norm_inputs)
+        res_attention = attention + inputs
+        output = res_attention + self.feed_forward(self.norm_2(res_attention))
+        return output
 
 class TransformerDecoder(nn.Module):
     """
@@ -58,12 +65,19 @@ class TransformerDecoder(nn.Module):
                  d_model,
                  d_filter,
                  dropout = None) -> None:
-        pass
+        self.embedding_layer = embedding_layer
+        self.output_layer = output_layer
+        embed_size = self.embedding_layer.embed_size
+        self.decoding_stack = []
+        for i in range(n_layers):
+            decoder = TransformerDecoderBlock(embed_size, n_heads, d_filter, d_model, dropout)
+            setattr(self,f"decoder{i}",decoder)
+            self.decoding_stack.append(decoder)
+        self.output_layer = output_layer
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, target_input, encoder_output, encoder_mask=None, decoder_mask=None, mask_future=False,
-        shift_target_sequence_right=False):
+    def __call__(self, input, encoder_mask=None, decoder_mask=None, mask_future=False):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -127,5 +141,5 @@ class Transformer(nn.Module):
                  **kwargs) -> None:
         pass
 
-    def __call__(self, source_sequence, target_sequence, encoder_mask, decoder_mask, mask_future=True, shift_target_sequence_right=True):
+    def __call__(self, source_sequence, target_sequence, decoder_mask, mask_future=True, shift_target_sequence_right=True):
         pass
