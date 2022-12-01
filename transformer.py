@@ -93,7 +93,7 @@ class TransformerDecoder():
         pass
         
         
-class TransformerInputEmbedding(nn.Module):
+class TransformerInputEmbedding():
 
     def __init__(self,
                  embed_size,
@@ -106,7 +106,7 @@ class TransformerInputEmbedding(nn.Module):
     def forward(self, inputs, start=1):
         pass
 
-class Transformer(nn.Module):
+class Transformer():
 
     def __init__(self,
                  vocab_size = None,

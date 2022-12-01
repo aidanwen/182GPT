@@ -19,7 +19,7 @@ class AttentionQKV():
         pass
 
 
-class MultiHeadProjection(nn.Module):
+class MultiHeadProjection():
 
     def __init__(self, n_heads, feature_sizes):
         """Map the multi-headed attention across the map
