@@ -6,6 +6,9 @@ import flax
 from flax import linen as nn
 from flax.training import train_state, checkpoints
 
+import transformer_utils
+from transfomer_attention import MultiHeadAttention
+
 class PositionEmbedding(nn.Module):
     def setup(self, hidden_size) -> None:
         pass
