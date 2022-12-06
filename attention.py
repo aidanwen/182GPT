@@ -109,7 +109,7 @@ class MultiHeadAttention(nn.Module):
                                                         'Feature size must be divisible by n_heads'
         assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
 
-        self.query_layer = weight_norm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
+        self.query_layer = nn.Linear(self.qa_channels, self.qa_channels, bias=False)
 
 
     def __call__(self, inputs, mask=None):

@@ -6,6 +6,8 @@ import flax
 from flax import linen as nn
 from flax.training import train_state, checkpoints
 
+from attention import MultiHeadAttention
+
 class PositionEmbedding(nn.Module):
     def setup(self, hidden_size) -> None:
         pass
@@ -52,7 +54,7 @@ class TransformerDecoderBlock(nn.Module):
 
     def __call__(self, inputs, self_attention_mask=None):
         norm_inputs = self.norm_1(inputs)
-        attention = self.attention(norm_inputs)
+        attention = self.attention(norm_inputs, mask=self_attention_mask)
         res_attention = attention + inputs
         output = res_attention + self.feed_forward(self.norm_2(res_attention))
         return output
@@ -99,7 +101,7 @@ class TransformerDecoder(nn.Module):
         input_embedding = self.embedding_layer(input)
         decoder_output = input_embedding
         for decoder in self.decoding_stack:
-            decoder_output = decoder(decoder_output)
+            decoder_output = decoder(decoder_output, self_attention_mask = self_attention_mask)
         output = self.output_layer(decoder_output)
         return output
         
