@@ -18,10 +18,16 @@ class TransformerFeedForward(nn.Module):
                  filter_size,
                  hidden_size,
                  dropout):
-        pass
+        self.fc = nn.Dense(4 * input_size)
+        self.proj = nn.Dense(input_size)
+        self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
-        pass
+        x = self.fc(inputs)
+        x = nn.gelu(x)
+        x = self.proj(x)
+        x = self.dropout(x)
+        return x
 
 class TransformerDecoderBlock(nn.Module):
     """A decoding block from the paper Attention Is All You Need (https://arxiv.org/pdf/1706.03762.pdf).
@@ -60,7 +66,7 @@ class TransformerDecoder(nn.Module):
     def setup(self,
                  embedding_layer,
                  output_layer,
-                 n_layers,
+                 n_layers = 6,
                  n_heads,
                  d_model,
                  d_filter,
@@ -90,7 +96,10 @@ class TransformerDecoder(nn.Module):
                 a tuple of (encoder_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
-        pass
+        x = input
+        for decoder in self.decoding_stack:
+            x = decoder(x)
+        return x
 
     def shift_target_sequence_right(self, target_sequence):
         pass
@@ -113,8 +122,8 @@ class TransformerDecoder(nn.Module):
     # exist within the internals.
     def get_cross_attention_mask(self, encoder_output, decoder_input, encoder_mask, decoder_mask):
         pass
-        
-        
+
+
 class TransformerInputEmbedding(nn.Module):
 
     def setup(self,
