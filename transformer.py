@@ -22,12 +22,13 @@ class TransformerFeedForward(nn.Module):
                  hidden_size,
                  dropout):
         self.fc = nn.Dense(4 * input_size)
+        self.gelu = TransformerGELU()
         self.proj = nn.Dense(input_size)
         self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
         x = self.fc(inputs)
-        x = nn.gelu(x)
+        x = self.gelu(x) # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
         return x
@@ -47,7 +48,7 @@ class TransformerDecoderBlock(nn.Module):
                  n_heads,
                  filter_size,
                  hidden_size,
-                 dropout = None) -> None:
+                 dropout = 0.1) -> None:
         self.norm_1 = nn.LayerNorm(input_size)
         self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
         self.norm_2 = nn.LayerNorm(input_size)
@@ -86,7 +87,7 @@ class TransformerDecoder(nn.Module):
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, encoder_mask=None, decoder_mask=None, mask_future=False):
+    def __call__(self, input, decoder_mask=None, mask_future=False):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -99,32 +100,12 @@ class TransformerDecoder(nn.Module):
                 a tuple of (encoder_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
-        x = input
+        input_embedding = self.embedding_layer(input)
+        decoder_output = input_embedding
         for decoder in self.decoding_stack:
-            x = decoder(x)
-        return x
-
-    def shift_target_sequence_right(self, target_sequence):
-        pass
-
-    def get_future_mask(self, batch_size, sequence_length):
-        """Mask future targets and padding
-
-            :param batch_size: a Tensor dimension
-            :param sequence_length: a Tensor dimension
-            :param padding_mask: None or bool Tensor with shape [batch_size, sequence_length]
-
-            :return mask Tensor with shape [batch_size, sequence_length, sequence_length]
-        """
-        pass
-
-    def get_self_attention_mask(self, batch_size, sequence_length, decoder_mask, mask_future):
-        pass
-
-    # This is an upper left block matrix which masks the attention for things that don't
-    # exist within the internals.
-    def get_cross_attention_mask(self, encoder_output, decoder_input, encoder_mask, decoder_mask):
-        pass
+            decoder_output = decoder(decoder_output)
+        output = self.output_layer(decoder_output)
+        return output
 
 
 class TransformerInputEmbedding(nn.Module):
