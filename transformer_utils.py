@@ -5,7 +5,16 @@ from jax import random
 import flax
 from flax import linen as nn
 
+class TransformerGELU(nn.Module):
+    """
+    Applies GELU function layer-wise
+    """
+    def setup(self, approximate=False):
+        super().__init__()
+        self.approximate = approximate
 
+    def __call__(self, x):
+        return nn.gelu(x, self.approximate)
 
 class ApplyAttentionMask(nn.Module):
     """

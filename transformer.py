@@ -19,12 +19,13 @@ class TransformerFeedForward(nn.Module):
                  hidden_size,
                  dropout):
         self.fc = nn.Dense(4 * input_size)
+        self.gelu = TransformerGELU()
         self.proj = nn.Dense(input_size)
         self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
         x = self.fc(inputs)
-        x = nn.gelu(x) # gelu activation function
+        x = self.gelu(x) # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
         return x
@@ -102,8 +103,8 @@ class TransformerDecoder(nn.Module):
             decoder_output = decoder(decoder_output)
         output = self.output_layer(decoder_output)
         return output
-        
-        
+
+
 class TransformerInputEmbedding(nn.Module):
 
     def setup(self,
