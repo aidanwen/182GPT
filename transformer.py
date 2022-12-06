@@ -24,7 +24,7 @@ class TransformerFeedForward(nn.Module):
 
     def __call__(self, inputs):
         x = self.fc(inputs)
-        x = nn.gelu(x)
+        x = nn.gelu(x) # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
         return x
@@ -44,7 +44,7 @@ class TransformerDecoderBlock(nn.Module):
                  n_heads,
                  filter_size,
                  hidden_size,
-                 dropout = None) -> None:
+                 dropout = 0.1) -> None:
         self.norm_1 = nn.LayerNorm(input_size)
         self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
         self.norm_2 = nn.LayerNorm(input_size)
