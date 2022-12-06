@@ -21,12 +21,13 @@ class TransformerFeedForward(nn.Module):
                  hidden_size,
                  dropout):
         self.fc = nn.Dense(4 * input_size)
+        self.gelu = TransformerGELU()
         self.proj = nn.Dense(input_size)
         self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
         x = self.fc(inputs)
-        x = nn.gelu(x)
+        x = self.gelu(x) # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
         return x
@@ -46,7 +47,7 @@ class TransformerDecoderBlock(nn.Module):
                  n_heads,
                  filter_size,
                  hidden_size,
-                 dropout = None) -> None:
+                 dropout = 0.1) -> None:
         self.norm_1 = nn.LayerNorm(input_size)
         self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
         self.norm_2 = nn.LayerNorm(input_size)
@@ -104,8 +105,8 @@ class TransformerDecoder(nn.Module):
             decoder_output = decoder(decoder_output, self_attention_mask = self_attention_mask)
         output = self.output_layer(decoder_output)
         return output
-        
-        
+
+
 class TransformerInputEmbedding(nn.Module):
 
     def setup(self,
