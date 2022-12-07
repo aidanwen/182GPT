@@ -1,11 +1,11 @@
-import pandas
-import spacy
+from datasets import load_dataset
+from transformers import BertTokenizer
 
-def load_data(filename):
-    data=pandas.read_csv(filename,sep='\t')
+def load_train_data(filename):
+    data = load_dataset(filename, split='train')
     return data
 
 def tokenize_data(data):
-    nlp = spacy.load("en_core_web_sm")
-    tokens = [ent.text for ent in doc.ents for doc in nlp.pipe(data)]
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    tokens = data.map(lambda x: tokenizer.tokenize(x['text']))
     return tokens
