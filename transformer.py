@@ -72,9 +72,9 @@ class TransformerDecoder(nn.Module):
                  embedding_layer,
                  output_layer,
                  n_layers = 6,
-                 n_heads,
-                 d_model,
-                 d_filter,
+                 n_heads = 8,
+                 d_model = 512,
+                 d_filter = 2048,
                  dropout = None) -> None:
         self.embedding_layer = embedding_layer
         self.output_layer = output_layer
@@ -120,20 +120,4 @@ class TransformerInputEmbedding(nn.Module):
         pass
 
     def __call__(self, inputs, start=1):
-        pass
-
-class Transformer(nn.Module):
-
-    def setup(self,
-                 vocab_size = None,
-                 n_layers = 6,
-                 n_heads = 8,
-                 d_model = 512,
-                 d_filter = 2048,
-                 dropout = None,
-                 embedding_initializer=None,
-                 **kwargs) -> None:
-        pass
-
-    def __call__(self, source_sequence, target_sequence, decoder_mask, mask_future=True, shift_target_sequence_right=True):
         pass
