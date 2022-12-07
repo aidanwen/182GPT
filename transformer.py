@@ -8,6 +8,8 @@ from flax.training import train_state, checkpoints
 
 from attention import MultiHeadAttention
 
+import transformer_utils
+
 class PositionEmbedding(nn.Module):
     def setup(self, hidden_size) -> None:
         pass
@@ -20,14 +22,14 @@ class TransformerFeedForward(nn.Module):
                  filter_size,
                  hidden_size,
                  dropout):
-        self.fc = nn.Dense(4 * input_size)
+        self.fc = nn.Dense(hidden_size)
         self.gelu = TransformerGELU()
         self.proj = nn.Dense(input_size)
         self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
         x = self.fc(inputs)
-        x = self.gelu(x) # gelu activation function
+        x = self.gelu(x)  # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
         return x
