@@ -6,6 +6,10 @@ import flax
 from flax import linen as nn
 from flax.training import train_state, checkpoints
 
+from attention import MultiHeadAttention
+
+import transformer_utils
+
 class PositionEmbedding(nn.Module):
     def setup(self, hidden_size) -> None:
         pass
@@ -13,15 +17,22 @@ class PositionEmbedding(nn.Module):
     def __call__(self, inputs, start=1):
         pass
 
-class TransformerFeed__call__(nn.Module):
+class TransformerFeedForward(nn.Module):
     def setup(self, input_size,
                  filter_size,
                  hidden_size,
                  dropout):
-        pass
+        self.fc = nn.Dense(hidden_size)
+        self.gelu = TransformerGELU()
+        self.proj = nn.Dense(input_size)
+        self.dropout = nn.Dropout(dropout)
 
     def __call__(self, inputs):
-        pass
+        x = self.fc(inputs)
+        x = self.gelu(x)  # gelu activation function
+        x = self.proj(x)
+        x = self.dropout(x)
+        return x
 
 class TransformerDecoderBlock(nn.Module):
     """A decoding block from the paper Attention Is All You Need (https://arxiv.org/pdf/1706.03762.pdf).
@@ -38,11 +49,18 @@ class TransformerDecoderBlock(nn.Module):
                  n_heads,
                  filter_size,
                  hidden_size,
-                 dropout = None) -> None:
-        pass
+                 dropout = 0.1) -> None:
+        self.norm_1 = nn.LayerNorm(input_size)
+        self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
+        self.norm_2 = nn.LayerNorm(input_size)
+        self.feed_forward = TransformerFeedForward(input_size, filter_size, hidden_size, dropout)
 
-    def __call__(self, decoder_inputs, encoder_outputs, self_attention_mask=None, cross_attention_mask=None):
-        pass
+    def __call__(self, inputs, self_attention_mask=None):
+        norm_inputs = self.norm_1(inputs)
+        attention = self.attention(norm_inputs, mask=self_attention_mask)
+        res_attention = attention + inputs
+        output = res_attention + self.feed_forward(self.norm_2(res_attention))
+        return output
 
 class TransformerDecoder(nn.Module):
     """
@@ -53,17 +71,24 @@ class TransformerDecoder(nn.Module):
     def setup(self,
                  embedding_layer,
                  output_layer,
-                 n_layers,
-                 n_heads,
-                 d_model,
-                 d_filter,
+                 n_layers = 6,
+                 n_heads = 8,
+                 d_model = 512,
+                 d_filter = 2048,
                  dropout = None) -> None:
-        pass
+        self.embedding_layer = embedding_layer
+        self.output_layer = output_layer
+        embed_size = self.embedding_layer.embed_size
+        self.decoding_stack = []
+        for i in range(n_layers):
+            decoder = TransformerDecoderBlock(embed_size, n_heads, d_filter, d_model, dropout)
+            setattr(self,f"decoder{i}",decoder)
+            self.decoding_stack.append(decoder)
+        self.output_layer = output_layer
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, target_input, encoder_output, encoder_mask=None, decoder_mask=None, mask_future=False,
-        shift_target_sequence_right=False):
+    def __call__(self, input, decoder_mask=None, mask_future=False):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -76,31 +101,14 @@ class TransformerDecoder(nn.Module):
                 a tuple of (encoder_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
-        pass
+        input_embedding = self.embedding_layer(input)
+        decoder_output = input_embedding
+        for decoder in self.decoding_stack:
+            decoder_output = decoder(decoder_output, self_attention_mask = self_attention_mask)
+        output = self.output_layer(decoder_output)
+        return output
 
-    def shift_target_sequence_right(self, target_sequence):
-        pass
 
-    def get_future_mask(self, batch_size, sequence_length):
-        """Mask future targets and padding
-
-            :param batch_size: a Tensor dimension
-            :param sequence_length: a Tensor dimension
-            :param padding_mask: None or bool Tensor with shape [batch_size, sequence_length]
-
-            :return mask Tensor with shape [batch_size, sequence_length, sequence_length]
-        """
-        pass
-
-    def get_self_attention_mask(self, batch_size, sequence_length, decoder_mask, mask_future):
-        pass
-
-    # This is an upper left block matrix which masks the attention for things that don't
-    # exist within the internals.
-    def get_cross_attention_mask(self, encoder_output, decoder_input, encoder_mask, decoder_mask):
-        pass
-        
-        
 class TransformerInputEmbedding(nn.Module):
 
     def setup(self,
@@ -112,20 +120,4 @@ class TransformerInputEmbedding(nn.Module):
         pass
 
     def __call__(self, inputs, start=1):
-        pass
-
-class Transformer(nn.Module):
-
-    def setup(self,
-                 vocab_size = None,
-                 n_layers = 6,
-                 n_heads = 8,
-                 d_model = 512,
-                 d_filter = 2048,
-                 dropout = None,
-                 embedding_initializer=None,
-                 **kwargs) -> None:
-        pass
-
-    def __call__(self, source_sequence, target_sequence, encoder_mask, decoder_mask, mask_future=True, shift_target_sequence_right=True):
         pass
