@@ -279,18 +279,16 @@ class MultiHeadAttention(nn.Module):
                                                         'Feature size must be divisible by n_heads'
         assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
 
-        self.query_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
-        self.key_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
-        self.value_layer = nn.LayerNorm(nn.Dense(self.ma_channels, use_bias=False))
+        self.initializer = nn.initializers.normal(0.02)
 
-        self.output_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
+        self.query_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+        self.key_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+        self.value_layer = nn.Dense(self.ma_channels, W_init=self.initializer, use_bias=False)
 
-        def weights_init(m):
-            nn.initializers.normal(stddev=0.02)
-        self.query_layer.apply(weights_init)
-        self.key_layer.apply(weights_init)
-        self.value_layer.apply(weights_init)
-        self.output_layer.apply(weights_init)
+        self.output_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+
+        self.layer_norm = nn.LayerNorm()
+
 
     def __call__(self, inputs, mask=None):
         """Fast multi-head self attention.
@@ -299,10 +297,10 @@ class MultiHeadAttention(nn.Module):
                 memory_antecedent -> tensor w/ shape [batch_size, n_keyval, channels]
         """
         query_antecedent, memory_antecedent = inputs
-        q = self.query_layer(query_antecedent)
-        k = self.key_layer(memory_antecedent)
-        v = self.value_layer(memory_antecedent)
+        q = self.layer_norm(self.query_layer(query_antecedent))
+        k = self.layer_norm(self.key_layer(memory_antecedent))
+        v = self.layer_norm(self.value_layer(memory_antecedent))
 
         attention_output = self.attention_layer((q, k, v), mask=mask)
-        output = self.output_layer(attention_output)
+        output = self.layer_norm(self.output_layer(attention_output))
         return output
