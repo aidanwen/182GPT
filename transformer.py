@@ -11,11 +11,24 @@ from attention import MultiHeadAttention
 import transformer_utils
 
 class PositionEmbedding(nn.Module):
-    def setup(self, hidden_size) -> None:
-        pass
+    def setup(self, d_model=512):
+        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
+        self.d_model = d_model
 
-    def __call__(self, inputs, start=1):
-        pass
+
+    def __call__(self, x):
+        seq_len = jnp.size(x,1)
+
+        pe = jnp.zeros((seq_len, self.d_model))
+        position = np.arange(0, seq_len, dtype=np.float32)[:,None]
+        div_term = np.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
+        pe[:, 0::2] = np.sin(position * div_term)
+        pe[:, 1::2] = np.cos(position * div_term)
+        pe = pe[None]
+        self.pe = jax.device_put(pe)
+
+        x = x + self.pe[:, :x.shape[1]]
+        return x
 
 class TransformerFeedForward(nn.Module):
     def setup(self, input_size,
@@ -79,7 +92,8 @@ class TransformerDecoder(nn.Module):
 
         self.embed_size = embed_size
         self.token_embedding = nn.Embed(vocab_size, self.embed_size)
-        self.pos_embedding = nn.Embed(d_model, self.embed_size)
+        self.pos_embedding = PositionEmbedding(d_model, self.embed_size)
+        # self.pos_embedding = nn.Embed(d_model, self.embed_size)
 
         self.output_layer = nn.Dense(vocab_size, use_bias=False)
 
@@ -105,7 +119,7 @@ class TransformerDecoder(nn.Module):
                 mask_future: a boolean for whether to mask future states in target self attention
 
             Returns:
-                a tuple of (encoder_output, output)
+                a tuple of (embedding_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
         seq_len = jnp.size(decoder_output,1)
@@ -125,19 +139,8 @@ class TransformerDecoder(nn.Module):
         decoder_output = self.norm(decoder_output)
 
         embedding_output = self.token_embedding.attend(decoder_output)
-        output = self.output_layer(decoder_output)
+        output = None
+        if fine_tune:
+            output = self.output_layer(decoder_output)
+
         return embedding_output, output
-
-
-class TransformerInputEmbedding(nn.Module):
-
-    def setup(self,
-                 embed_size,
-                 vocab_size = None,
-                 dropout = None,
-                 batch_norm = False,
-                 embedding_initializer=None) -> None:
-        pass
-
-    def __call__(self, inputs, start=1):
-        pass
