@@ -1,32 +1,22 @@
-import jax
-import jax.numpy as jnp
-from jax import random
-import math
+class PositionEmbedding(nn.Module):
+    d_model : int
+    def setup(self):
+        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
+        pass
 
-import flax
-from flax import linen as nn
-from flax.training import train_state, checkpoints
+    def __call__(self, x):
+        seq_len = jnp.size(x,1)
 
+        pe = jnp.zeros((seq_len, self.d_model))
+        position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
+        div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
+        pe[:, 0::2] = jnp.sin(position * div_term)
+        pe[:, 1::2] = jnp.cos(position * div_term)
+        pe = pe[None]
+        self.pe = jax.device_put(pe)
 
-# class PositionEmbedding(nn.Module):
-#     d_model : int
-#     def setup(self):
-#         # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-#         pass
-#
-#     def __call__(self, x):
-#         seq_len = jnp.size(x,1)
-#
-#         pe = jnp.zeros((seq_len, self.d_model))
-#         position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
-#         div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
-#         pe[:, 0::2] = jnp.sin(position * div_term)
-#         pe[:, 1::2] = jnp.cos(position * div_term)
-#         pe = pe[None]
-#         self.pe = jax.device_put(pe)
-#
-#         x = x + self.pe[:, :x.shape[1]]
-#         return x
+        x = x + self.pe[:, :x.shape[1]]
+        return x
 
 class TransformerFeedForward(nn.Module):
     intput_size : int
@@ -37,21 +27,19 @@ class TransformerFeedForward(nn.Module):
         self.fc = nn.Dense(self.hidden_size)
         self.gelu = TransformerGELU()
         self.proj = nn.Dense(self.input_size)
-        self.dropout = nn.Dropout(self.dropout)
+        self.dropout_layer = nn.Dropout(self.dropout)
 
     def __call__(self, x):
         x = self.fc(x)
         x = self.gelu(x)  # gelu activation function
         x = self.proj(x)
-        x = self.dropout(x)
+        x = self.dropout_layer(x)
         return x
 
 class TransformerDecoderBlock(nn.Module):
     """A decoding block from the paper Attention Is All You Need (https://arxiv.org/pdf/1706.03762.pdf).
-
     :param inputs: Tensor of decoder_inputs
 \                    decoder_inputs -> a Tensor with shape [batch_size, decoding_sequence_length, channels]
-
     :return: output: Tensor with same shape as decoder_inputs
     """
     input_size : int
@@ -95,24 +83,25 @@ class TransformerDecoder(nn.Module):
     def setup(self):
 
         self.token_embedding = nn.Embed(self.vocab_size, self.embed_size)
-        # self.pos_embedding = PositionEmbedding(self.d_model, self.embed_size)
-        self.pos_embedding = nn.Embed(d_model, self.embed_size)
+        self.pos_embedding = nn.Embed(self.d_model, self.embed_size)
+        # self.pos_embedding = nn.Embed(d_model, self.embed_size)
 
         self.output_layer = nn.Dense(self.vocab_size, use_bias=False)
 
-        self.decoding_stack = []
+        decoding_stack = [0]*self.n_layers
         for i in range(self.n_layers):
             decoder = TransformerDecoderBlock(self.embed_size, self.n_heads, self.d_filter, self.d_model, self.dropout)
             setattr(self,f"decoder{i}",decoder)
-            self.decoding_stack.append(decoder)
+            decoding_stack[i] = decoder
         # self.output_layer = output_layer
-        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(self.d_model, self.d_model)), (1,1,self.d_model,self.d_model))
+        self.decoding_stack = decoding_stack
+        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones((self.d_model, self.d_model))), (1,1,self.d_model,self.d_model))
         self.norm = nn.LayerNorm(self.embed_size)
-        self.drop = nn.Dropout(self.dropout)
+        self.drop = nn.Dropout(self.dropout, deterministic=False)
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, fine_tune = False):
+    def __call__(self, input, fine_tune = False, train=True):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -120,19 +109,18 @@ class TransformerDecoder(nn.Module):
                     target_input: either a int32 or float32 Tensor with shape [batch_size, target_length, ndims]
                     cache: Used for fast decoding, a dictionary of tf.TensorArray. None during training.
                 mask_future: a boolean for whether to mask future states in target self attention
-
             Returns:
                 a tuple of (embedding_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
-        seq_len = jnp.size(decoder_output,1)
+        seq_len = len(input)
 
-        pos = jnp.expand_dims(jnp.arange(0, stop=seq_len,dtype=jnp.long),0)
+        pos = jnp.expand_dims(jnp.arange(0, stop=seq_len),0)
 
         tok_embed = self.token_embedding(input) # (batch_size, sequence_length, d_model)
         pos_embed = self.pos_embedding(pos) # (1, sequence_length, d_model)
 
-        decoder_input = self.dropout(tok_embed + pos_embed)
+        decoder_output = self.drop(tok_embed + pos_embed)
 
         self_attention_mask = (self.attention_mask[:,:,:seq_len,:seq_len] == 0)
 
@@ -172,7 +160,6 @@ class ApplyAttentionMask(nn.Module):
             Args:
                   similarity: a Tensor wijnp shape [batch_size, heads (optional), q/k_lengjnp, q/k_lengjnp]
                   mask: a Tensor wijnp shape [batch_size, q/k_lengjnp, q/k_lengjnp]
-
             Returns:
                 masked_similarity: a Tensor wijnp shape [batch_size, heads (optional), q/k_lengjnp, q/k_lengjnp]
         """
@@ -209,12 +196,10 @@ class AttentionQKV(nn.Module):
 
     def __call__(self, queries, keys, values, mask=None):
         """Fast scaled dot product attention.
-
             :param queries: Tensor with shape [batch_size, heads (optional), n_queries, depth_k]
             :param keys:    Tensor with shape [batch_size, heads (optional), n_keyval, depth_k]
             :param values:  Tensor with shape [batch_size, heads (optional), n_keyval, depth_v]
             :param mask:    Tensor with shape [batch_size, n_queries, n_queries]
-
             :return: output: Tensor with shape [batch_size, heads (optional), n_queries, depth_v]
         """
         key_dim = jnp.array(keys.shape[-1], dtype=jnp.float32)
@@ -231,11 +216,9 @@ class MultiHeadProjection(nn.Module):
     feature_sizes : int
     def setup(self):
         """Map the multi-headed attention across the map
-
         Arguments:
             n_heads {int} -- The number of heads in the attention map
             feature_sizes {int} -- The size of the feature dimensions for key, query, and value
-
         """
 
         self.attention_map = AttentionQKV()
@@ -245,11 +228,9 @@ class MultiHeadProjection(nn.Module):
 
     def __call__(self, inputs, mask=None):
         """Fast multi-head attention.
-
         :param queries: Tensor with shape [batch_size, n_queries, depth_k]
         :param keys:    Tensor with shape [batch_size, n_keyval, depth_k]
         :param values:  Tensor with shape [batch_size, n_keyval, depth_v]
-
         :return: output: Tensor with shape [batch_size, n_queries, depth_v]
         """
         queries, keys, values = inputs
@@ -286,24 +267,23 @@ class MultiHeadProjection(nn.Module):
 class MultiHeadAttention(nn.Module):
     """
     Fast multi-head attention. Based on the Attention is All You Need paper.
-
     https://arxiv.org/pdf/1706.03762.pdf
     """
     n_heads : int
     input_shapes : int
     def setup(self):
         self.qa_channels, self.ma_channels = self.input_shapes
-        self.attention_layer = MultiHeadProjection()
-
+        self.attention_layer = MultiHeadProjection(self.n_heads, self.input_shapes)
+        print(self.qa_channels, self.ma_channels)
         assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \
                                                         'Feature size must be divisible by n_heads'
         assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
 
-        self.query_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
-        self.key_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
-        self.value_layer = nn.LayerNorm(nn.Linear(self.ma_channels, self.ma_channels, bias=False))
+        self.query_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
+        self.key_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
+        self.value_layer = nn.LayerNorm(nn.Dense(self.ma_channels, use_bias=False))
 
-        self.output_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
+        self.output_layer = nn.LayerNorm(nn.Dense(self.qa_channels, use_bias=False))
 
         def weights_init(m):
             nn.initializers.normal(stddev=0.02)
@@ -314,7 +294,6 @@ class MultiHeadAttention(nn.Module):
 
     def __call__(self, inputs, mask=None):
         """Fast multi-head self attention.
-
             :param inputs: tuple of (query_antecedent, memory_antecedent)
                 query_antecedent -> tensor w/ shape [batch_size, n_queries, channels]
                 memory_antecedent -> tensor w/ shape [batch_size, n_keyval, channels]
