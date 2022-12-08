@@ -306,9 +306,9 @@ class MultiHeadProjection(nn.Module):
 #         output = self.layer_norm(self.output_layer(attention_output))
 #         return output
 
-class MultiHeadAttention(nn.Module):
-    num_heads : int  # Output dimension
-    embed_dim : int  # Number of parallel heads (h)
+class MultiheadAttention(nn.Module):
+    embed_dim : int  # Output dimension
+    num_heads : int  # Number of parallel heads (h)
 
     def setup(self):
         # Stack all weight matrices 1...h and W^Q, W^K, W^V together for efficiency
