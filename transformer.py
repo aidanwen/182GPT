@@ -78,7 +78,7 @@ class TransformerDecoderBlock(nn.Module):
 class TransformerDecoder(nn.Module):
     """
         Stack of TransformerDecoderBlocks. Performs initial embedding to d_model dimensions, then repeated self-attention
-        followed by attention on source sequence. Defaults to 6 layers of self-attention.
+        followed by attention on source sequence. Defaults to 12 layers of self-attention.
     """
     # embed_size,
     # vocab_size,
