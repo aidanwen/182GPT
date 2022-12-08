@@ -1,31 +1,32 @@
 import jax
 import jax.numpy as jnp
 from jax import random
+import math
 
 import flax
 from flax import linen as nn
 from flax.training import train_state, checkpoints
 
 
-class PositionEmbedding(nn.Module):
-    d_model : int
-    def setup(self):
-        # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-        pass
-
-    def __call__(self, x):
-        seq_len = jnp.size(x,1)
-
-        pe = jnp.zeros((seq_len, self.d_model))
-        position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
-        div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
-        pe[:, 0::2] = jnp.sin(position * div_term)
-        pe[:, 1::2] = jnp.cos(position * div_term)
-        pe = pe[None]
-        self.pe = jax.device_put(pe)
-
-        x = x + self.pe[:, :x.shape[1]]
-        return x
+# class PositionEmbedding(nn.Module):
+#     d_model : int
+#     def setup(self):
+#         # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
+#         pass
+#
+#     def __call__(self, x):
+#         seq_len = jnp.size(x,1)
+#
+#         pe = jnp.zeros((seq_len, self.d_model))
+#         position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
+#         div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
+#         pe[:, 0::2] = jnp.sin(position * div_term)
+#         pe[:, 1::2] = jnp.cos(position * div_term)
+#         pe = pe[None]
+#         self.pe = jax.device_put(pe)
+#
+#         x = x + self.pe[:, :x.shape[1]]
+#         return x
 
 class TransformerFeedForward(nn.Module):
     intput_size : int
@@ -94,8 +95,8 @@ class TransformerDecoder(nn.Module):
     def setup(self):
 
         self.token_embedding = nn.Embed(self.vocab_size, self.embed_size)
-        self.pos_embedding = PositionEmbedding(self.d_model, self.embed_size)
-        # self.pos_embedding = nn.Embed(d_model, self.embed_size)
+        # self.pos_embedding = PositionEmbedding(self.d_model, self.embed_size)
+        self.pos_embedding = nn.Embed(d_model, self.embed_size)
 
         self.output_layer = nn.Dense(self.vocab_size, use_bias=False)
 
