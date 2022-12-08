@@ -37,8 +37,9 @@ class AttentionQKV(nn.Module):
 
 
 class MultiHeadProjection(nn.Module):
-
-    def setup(self, n_heads, feature_sizes):
+    n_heads : int
+    feature_sizes : int
+    def setup(self):
         """Map the multi-headed attention across the map
 
         Arguments:
@@ -99,8 +100,9 @@ class MultiHeadAttention(nn.Module):
 
     https://arxiv.org/pdf/1706.03762.pdf
     """
-
-    def setup(self, n_heads, input_shapes):
+    n_heads : int
+    input_shapes : int
+    def setup(self):
         self.qa_channels, self.ma_channels = input_shapes
         self.n_heads = n_heads
         self.attention_layer = MultiHeadProjection()
