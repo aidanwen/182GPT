@@ -19,7 +19,7 @@ class PositionEmbedding(nn.Module):
         return x
 
 class TransformerFeedForward(nn.Module):
-    intput_size : int
+    input_size : int
     filter_size : int
     hidden_size : int
     dropout : float
@@ -27,7 +27,7 @@ class TransformerFeedForward(nn.Module):
         self.fc = nn.Dense(self.hidden_size)
         self.gelu = TransformerGELU()
         self.proj = nn.Dense(self.input_size)
-        self.dropout_layer = nn.Dropout(self.dropout)
+        self.dropout_layer = nn.Dropout(self.dropout, deterministic=False)
 
     def __call__(self, x):
         x = self.fc(x)
@@ -49,7 +49,7 @@ class TransformerDecoderBlock(nn.Module):
     dropout : float
     def setup(self):
         self.norm_1 = nn.LayerNorm(self.input_size)
-        self.attention = MultiHeadAttention(self.n_heads,[self.input_size,self.input_size])
+        self.attention = MultiHeadAttention(self.n_heads, self.input_size)
         self.norm_2 = nn.LayerNorm(self.input_size)
         self.feed_forward = TransformerFeedForward(self.input_size, self.filter_size, self.hidden_size, self.dropout)
 
@@ -306,9 +306,9 @@ class MultiHeadProjection(nn.Module):
 #         output = self.layer_norm(self.output_layer(attention_output))
 #         return output
 
-class MultiheadAttention(nn.Module):
-    embed_dim : int  # Output dimension
-    num_heads : int  # Number of parallel heads (h)
+class MultiHeadAttention(nn.Module):
+    num_heads : int  # Output dimension
+    embed_dim : int  # Number of parallel heads (h)
 
     def setup(self):
         # Stack all weight matrices 1...h and W^Q, W^K, W^V together for efficiency
@@ -336,7 +336,7 @@ class MultiheadAttention(nn.Module):
         values = values.reshape(batch_size, seq_length, embed_dim)
         o = self.o_proj(values)
 
-        return o, attention
+        return o
 
 def scaled_dot_product(q, k, v, mask=None):
     d_k = q.shape[-1]
