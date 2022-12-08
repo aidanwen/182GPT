@@ -275,13 +275,14 @@ class MultiHeadAttention(nn.Module):
 
         self.qkv = nn.Dense(3*self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias = False)
         self.output = nn.Dense(self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias=False)
-        self.attention_layer = MultiHeadProjection(self.n_heads, self.input_shapes)
+        self.attention_layer = MultiHeadProjection(self.n_heads, self.embed_dim)
         self.layer_norm = nn.LayerNorm()
 
 
     def __call__(self, inputs, mask=None):
         """Fast multi-head self attention.
         """
+        batch_size, seq_length, embed_dim = x.shape
         qkv = self.qkv(inputs)
 
         qkv = qkv.reshape(batch_size, seq_length, self.num_heads, -1)
