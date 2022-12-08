@@ -117,8 +117,8 @@ class MultiHeadAttention(nn.Module):
 
         self.output_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
 
-    def weights_init(m):
-        nn.initializers.normal(stddev=0.02)
+        def weights_init(m):
+            nn.initializers.normal(stddev=0.02)
         self.query_layer.apply(weights_init)
         self.key_layer.apply(weights_init)
         self.value_layer.apply(weights_init)
