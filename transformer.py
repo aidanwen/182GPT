@@ -88,7 +88,7 @@ class TransformerDecoder(nn.Module):
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, decoder_mask=None, mask_future=False):
+    def __call__(self, input, mask_future=True):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -109,15 +109,3 @@ class TransformerDecoder(nn.Module):
         return output
 
 
-class TransformerInputEmbedding(nn.Module):
-
-    def setup(self,
-                 embed_size,
-                 vocab_size = None,
-                 dropout = None,
-                 batch_norm = False,
-                 embedding_initializer=None) -> None:
-        pass
-
-    def __call__(self, inputs, start=1):
-        pass
