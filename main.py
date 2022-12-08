@@ -19,7 +19,7 @@ class PositionEmbedding(nn.Module):
         return x
 
 class TransformerFeedForward(nn.Module):
-    intput_size : int
+    input_size : int
     filter_size : int
     hidden_size : int
     dropout : float
@@ -27,7 +27,7 @@ class TransformerFeedForward(nn.Module):
         self.fc = nn.Dense(self.hidden_size)
         self.gelu = TransformerGELU()
         self.proj = nn.Dense(self.input_size)
-        self.dropout_layer = nn.Dropout(self.dropout)
+        self.dropout_layer = nn.Dropout(self.dropout, deterministic=False)
 
     def __call__(self, x):
         x = self.fc(x)
@@ -49,7 +49,7 @@ class TransformerDecoderBlock(nn.Module):
     dropout : float
     def setup(self):
         self.norm_1 = nn.LayerNorm(self.input_size)
-        self.attention = MultiHeadAttention(self.n_heads,self.input_size)
+        self.attention = MultiHeadAttention(self.n_heads, self.input_size)
         self.norm_2 = nn.LayerNorm(self.input_size)
         self.feed_forward = TransformerFeedForward(self.input_size, self.filter_size, self.hidden_size, self.dropout)
 
@@ -274,7 +274,7 @@ class MultiHeadAttention(nn.Module):
     def setup(self):
 
         self.qkv_proj = nn.Dense(3*self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias = False)
-        
+
 
         self.qa_channels, self.ma_channels = self.input_shapes
         self.attention_layer = MultiHeadProjection(self.n_heads, self.input_shapes)
