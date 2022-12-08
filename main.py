@@ -269,13 +269,13 @@ class MultiHeadAttention(nn.Module):
     Fast multi-head attention. Based on the Attention is All You Need paper.
     https://arxiv.org/pdf/1706.03762.pdf
     """
-    n_heads : int
+    num_heads : int
     embed_dim : int
     def setup(self):
 
         self.qkv = nn.Dense(3*self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias = False)
         self.output = nn.Dense(self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias=False)
-        self.attention_layer = MultiHeadProjection(self.n_heads, self.embed_dim)
+        self.attention_layer = MultiHeadProjection(self.num_heads, self.embed_dim)
         self.layer_norm = nn.LayerNorm()
 
 
