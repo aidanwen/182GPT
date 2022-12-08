@@ -49,7 +49,7 @@ class TransformerDecoderBlock(nn.Module):
     dropout : float
     def setup(self):
         self.norm_1 = nn.LayerNorm(self.input_size)
-        self.attention = MultiHeadAttention(self.n_heads,[self.input_size,self.input_size])
+        self.attention = MultiHeadAttention(self.n_heads,self.input_size)
         self.norm_2 = nn.LayerNorm(self.input_size)
         self.feed_forward = TransformerFeedForward(self.input_size, self.filter_size, self.hidden_size, self.dropout)
 
@@ -306,7 +306,7 @@ class MultiHeadProjection(nn.Module):
 #         output = self.layer_norm(self.output_layer(attention_output))
 #         return output
 
-class MultiheadAttention(nn.Module):
+class MultiHeadAttention(nn.Module):
     embed_dim : int  # Output dimension
     num_heads : int  # Number of parallel heads (h)
 
