@@ -104,7 +104,7 @@ class MultiHeadAttention(nn.Module):
         self.qa_channels, self.ma_channels = input_shapes
         self.n_heads = n_heads
         self.attention_layer = MultiHeadProjection()
-        
+
         assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \
                                                         'Feature size must be divisible by n_heads'
         assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
@@ -115,12 +115,13 @@ class MultiHeadAttention(nn.Module):
 
         self.output_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
 
-        def weights_init(m):
-            nn.initializers.normal(stddev=0.02)
+    def weights_init(m):
+        nn.initializers.normal(stddev=0.02)
         self.query_layer.apply(weights_init)
         self.key_layer.apply(weights_init)
         self.value_layer.apply(weights_init)
         self.output_layer.apply(weights_init)
+
     def __call__(self, inputs, mask=None):
         """Fast multi-head self attention.
 
