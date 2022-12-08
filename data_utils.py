@@ -10,9 +10,9 @@ def tokenize_data(data):
     tokens = data.map(lambda x: {'text': tokenizer.encode(x['text'])})
     return tokens
 
-def build_pretrain_batch(dataset, seq_length, batch_size):
+def build_batch(tokens, batch_size):
+    flat_tokens = list(np.array(tokens).flatten())
     indices = list(np.random.randint(0, len(dataset), size=batch_size))
+    batch = [tokens[i] for i in indices]
 
-    batch_input = [dataset[i:i+] for i in indices]
-
-    return batch_input
+    return batch
