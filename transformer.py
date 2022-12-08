@@ -11,19 +11,19 @@ from attention import MultiHeadAttention
 import transformer_utils
 
 class PositionEmbedding(nn.Module):
-    def setup(self, d_model=512):
+    d_model : int
+    def setup(self):
         # Create matrix of [SeqLen, HiddenDim] representing the positional encoding for max_len inputs
-        self.d_model = d_model
-
+        pass
 
     def __call__(self, x):
         seq_len = jnp.size(x,1)
 
         pe = jnp.zeros((seq_len, self.d_model))
-        position = np.arange(0, seq_len, dtype=np.float32)[:,None]
-        div_term = np.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
-        pe[:, 0::2] = np.sin(position * div_term)
-        pe[:, 1::2] = np.cos(position * div_term)
+        position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
+        div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
+        pe[:, 0::2] = jnp.sin(position * div_term)
+        pe[:, 1::2] = jnp.cos(position * div_term)
         pe = pe[None]
         self.pe = jax.device_put(pe)
 
@@ -31,17 +31,18 @@ class PositionEmbedding(nn.Module):
         return x
 
 class TransformerFeedForward(nn.Module):
-    def setup(self, input_size,
-                 filter_size,
-                 hidden_size,
-                 dropout):
-        self.fc = nn.Dense(hidden_size)
+    intput_size : int
+    filter_size : int
+    hidden_size : int
+    dropout : float
+    def setup(self):
+        self.fc = nn.Dense(self.hidden_size)
         self.gelu = TransformerGELU()
-        self.proj = nn.Dense(input_size)
-        self.dropout = nn.Dropout(dropout)
+        self.proj = nn.Dense(self.input_size)
+        self.dropout = nn.Dropout(self.dropout)
 
-    def __call__(self, inputs):
-        x = self.fc(inputs)
+    def __call__(self, x):
+        x = self.fc(x)
         x = self.gelu(x)  # gelu activation function
         x = self.proj(x)
         x = self.dropout(x)
@@ -55,17 +56,16 @@ class TransformerDecoderBlock(nn.Module):
 
     :return: output: Tensor with same shape as decoder_inputs
     """
-
-    def setup(self,
-                 input_size,
-                 n_heads,
-                 filter_size,
-                 hidden_size,
-                 dropout = 0.1) -> None:
-        self.norm_1 = nn.LayerNorm(input_size)
-        self.attention = MultiHeadAttention(n_heads,[input_size,input_size])
-        self.norm_2 = nn.LayerNorm(input_size)
-        self.feed_forward = TransformerFeedForward(input_size, filter_size, hidden_size, dropout)
+    input_size : int
+    n_heads : int
+    filter_size : int
+    hidden_size : int
+    dropout : float
+    def setup(self):
+        self.norm_1 = nn.LayerNorm(self.input_size)
+        self.attention = MultiHeadAttention(self.n_heads,[self.input_size,self.input_size])
+        self.norm_2 = nn.LayerNorm(self.input_size)
+        self.feed_forward = TransformerFeedForward(self.input_size, self.filter_size, self.hidden_size, self.dropout)
 
     def __call__(self, inputs, self_attention_mask=None):
         norm_inputs = self.norm_1(inputs)
@@ -79,37 +79,42 @@ class TransformerDecoder(nn.Module):
         Stack of TransformerDecoderBlocks. Performs initial embedding to d_model dimensions, then repeated self-attention
         followed by attention on source sequence. Defaults to 6 layers of self-attention.
     """
+    # embed_size,
+    # vocab_size,
+    # # output_layer,
+    # n_layers = 6,
+    # n_heads = 8,
+    # d_model = 512,
+    # d_filter = 2048,
+    # dropout = 0.1
+    embed_size : int
+    vocab_size : int
+    n_layers : int
+    n_heads : int
+    d_model : int
+    d_filter : int
+    dropout : float
+    def setup(self):
 
-    def setup(self,
-                 embed_size,
-                 vocab_size,
-                 # output_layer,
-                 n_layers = 6,
-                 n_heads = 8,
-                 d_model = 512,
-                 d_filter = 2048,
-                 dropout = 0.1) -> None:
-
-        self.embed_size = embed_size
-        self.token_embedding = nn.Embed(vocab_size, self.embed_size)
-        self.pos_embedding = PositionEmbedding(d_model, self.embed_size)
+        self.token_embedding = nn.Embed(self.vocab_size, self.embed_size)
+        self.pos_embedding = PositionEmbedding(self.d_model, self.embed_size)
         # self.pos_embedding = nn.Embed(d_model, self.embed_size)
 
-        self.output_layer = nn.Dense(vocab_size, use_bias=False)
+        self.output_layer = nn.Dense(self.vocab_size, use_bias=False)
 
         self.decoding_stack = []
-        for i in range(n_layers):
-            decoder = TransformerDecoderBlock(embed_size, n_heads, d_filter, d_model, dropout)
+        for i in range(self.n_layers):
+            decoder = TransformerDecoderBlock(self.embed_size, self.n_heads, self.d_filter, self.d_model, self.dropout)
             setattr(self,f"decoder{i}",decoder)
             self.decoding_stack.append(decoder)
-        self.output_layer = output_layer
-        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(d_model, d_model)), (1,1,d_model,d_model))
-        self.norm = nn.LayerNorm(embed_size)
-        self.drop = nn.Dropout(dropout)
+        # self.output_layer = output_layer
+        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(self.d_model, self.d_model)), (1,1,self.d_model,self.d_model))
+        self.norm = nn.LayerNorm(self.embed_size)
+        self.drop = nn.Dropout(self.dropout)
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, fine_tine = False):
+    def __call__(self, input, fine_tune = False):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)

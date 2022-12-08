@@ -37,8 +37,9 @@ class AttentionQKV(nn.Module):
 
 
 class MultiHeadProjection(nn.Module):
-
-    def setup(self, n_heads, feature_sizes):
+    n_heads : int
+    feature_sizes : int
+    def setup(self):
         """Map the multi-headed attention across the map
 
         Arguments:
@@ -48,9 +49,8 @@ class MultiHeadProjection(nn.Module):
         """
 
         self.attention_map = AttentionQKV()
-        self.n_heads = n_heads
 
-        for size in feature_sizes:
+        for size in self.feature_sizes:
             assert size % self.n_heads == 0
 
     def __call__(self, inputs, mask=None):
@@ -99,10 +99,10 @@ class MultiHeadAttention(nn.Module):
 
     https://arxiv.org/pdf/1706.03762.pdf
     """
-
-    def setup(self, n_heads, input_shapes):
-        self.qa_channels, self.ma_channels = input_shapes
-        self.n_heads = n_heads
+    n_heads : int
+    input_shapes : int
+    def setup(self):
+        self.qa_channels, self.ma_channels = self.input_shapes
         self.attention_layer = MultiHeadProjection()
 
         assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \
@@ -115,8 +115,8 @@ class MultiHeadAttention(nn.Module):
 
         self.output_layer = nn.LayerNorm(nn.Linear(self.qa_channels, self.qa_channels, bias=False))
 
-    def weights_init(m):
-        nn.initializers.normal(stddev=0.02)
+        def weights_init(m):
+            nn.initializers.normal(stddev=0.02)
         self.query_layer.apply(weights_init)
         self.key_layer.apply(weights_init)
         self.value_layer.apply(weights_init)
