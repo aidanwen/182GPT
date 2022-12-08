@@ -37,9 +37,8 @@ class TransformerFeedForward(nn.Module):
 class TransformerDecoderBlock(nn.Module):
     """A decoding block from the paper Attention Is All You Need (https://arxiv.org/pdf/1706.03762.pdf).
 
-    :param inputs: two Tensors encoder_outputs, decoder_inputs
-                    encoder_outputs -> a Tensor with shape [batch_size, sequence_length, channels]
-                    decoder_inputs -> a Tensor with shape [batch_size, decoding_sequence_length, channels]
+    :param inputs: Tensor of decoder_inputs
+\                    decoder_inputs -> a Tensor with shape [batch_size, decoding_sequence_length, channels]
 
     :return: output: Tensor with same shape as decoder_inputs
     """
@@ -85,6 +84,7 @@ class TransformerDecoder(nn.Module):
             setattr(self,f"decoder{i}",decoder)
             self.decoding_stack.append(decoder)
         self.output_layer = output_layer
+        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(d_model, d_model)), (1,1,d_model,d_model))
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
@@ -103,6 +103,8 @@ class TransformerDecoder(nn.Module):
         """
         input_embedding = self.embedding_layer(input)
         decoder_output = input_embedding
+        seq_len = jnp.size(decoder_output,1)
+        self_attention_mask = (self.attention_mask[:,:,:seq_len,:seq_len] == 0)
         for decoder in self.decoding_stack:
             decoder_output = decoder(decoder_output, self_attention_mask = self_attention_mask)
         output = self.output_layer(decoder_output)
