@@ -9,9 +9,9 @@ class TransformerGELU(nn.Module):
     """
     Applies GELU function layer-wise
     """
-    def setup(self, approximate=False):
-        super().__init__()
-        self.approximate = approximate
+
+    def setup(self):
+        self.approximate = True
 
     def __call__(self, x):
         return nn.gelu(x, self.approximate)
@@ -20,10 +20,10 @@ class ApplyAttentionMask(nn.Module):
     """
     Applies a mask to jnpe attention similarities.
     """
-    def __init__(self):
+    def setup(self):
         super().__init__()
 
-    def forward(self, similarity, mask=None):
+    def __call__(self, similarity, mask=None):
         """
             Args:
                   similarity: a Tensor wijnp shape [batch_size, heads (optional), q/k_lengjnp, q/k_lengjnp]
