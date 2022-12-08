@@ -68,16 +68,21 @@ class TransformerDecoder(nn.Module):
     """
 
     def setup(self,
-                 embedding_layer,
-                 output_layer,
+                 embed_size,
+                 vocab_size,
+                 # output_layer,
                  n_layers = 6,
                  n_heads = 8,
                  d_model = 512,
                  d_filter = 2048,
-                 dropout = None) -> None:
-        self.embedding_layer = embedding_layer
-        self.output_layer = output_layer
-        embed_size = self.embedding_layer.embed_size
+                 dropout = 0.1) -> None:
+
+        self.embed_size = embed_size
+        self.token_embedding = nn.Embed(vocab_size, self.embed_size)
+        self.pos_embedding = nn.Embed(d_model, self.embed_size)
+
+        self.output_layer = nn.Dense(vocab_size, use_bias=False)
+
         self.decoding_stack = []
         for i in range(n_layers):
             decoder = TransformerDecoderBlock(embed_size, n_heads, d_filter, d_model, dropout)
@@ -85,10 +90,12 @@ class TransformerDecoder(nn.Module):
             self.decoding_stack.append(decoder)
         self.output_layer = output_layer
         self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(d_model, d_model)), (1,1,d_model,d_model))
+        self.norm = nn.LayerNorm(embed_size)
+        self.drop = nn.Dropout(dropout)
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, decoder_mask=None, mask_future=False):
+    def __call__(self, input, mask_future=True):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
@@ -101,25 +108,22 @@ class TransformerDecoder(nn.Module):
                 a tuple of (encoder_output, output)
                     output: a Tensor with shape [batch_size, sequence_length, d_model]
         """
-        input_embedding = self.embedding_layer(input)
-        decoder_output = input_embedding
         seq_len = jnp.size(decoder_output,1)
+
+        pos = jnp.expand_dims(jnp.arange(0, stop=seq_len,dtype=jnp.long),0)
+
+        tok_embed = self.token_embedding(input) # (batch_size, sequence_length, d_model)
+        pos_embed = self.pos_embedding(pos) # (1, sequence_length, d_model)
+
+        decoder_input = self.dropout(tok_embed + pos_embed)
+
         self_attention_mask = (self.attention_mask[:,:,:seq_len,:seq_len] == 0)
+
         for decoder in self.decoding_stack:
             decoder_output = decoder(decoder_output, self_attention_mask = self_attention_mask)
+
+        decoder_output = self.norm(decoder_output)
         output = self.output_layer(decoder_output)
         return output
 
 
-class TransformerInputEmbedding(nn.Module):
-
-    def setup(self,
-                 embed_size,
-                 vocab_size = None,
-                 dropout = None,
-                 batch_norm = False,
-                 embedding_initializer=None) -> None:
-        pass
-
-    def __call__(self, inputs, start=1):
-        pass
