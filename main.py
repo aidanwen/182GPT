@@ -264,51 +264,55 @@ class MultiHeadProjection(nn.Module):
         array = array.reshape(batch_size, arraylen, new_feature_size)
         return array
 
-# class MultiHeadAttention(nn.Module):
-#     """
-#     Fast multi-head attention. Based on the Attention is All You Need paper.
-#     https://arxiv.org/pdf/1706.03762.pdf
-#     """
-#     n_heads : int
-#     input_shapes : int
-#     def setup(self):
-#         self.qa_channels, self.ma_channels = self.input_shapes
-#         self.attention_layer = MultiHeadProjection(self.n_heads, self.input_shapes)
-#         print(self.qa_channels, self.ma_channels)
-#         assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \
-#                                                         'Feature size must be divisible by n_heads'
-#         assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
-#
-#         self.initializer = nn.initializers.normal(0.02)
-#
-#         self.query_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
-#         self.key_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
-#         self.value_layer = nn.Dense(self.ma_channels, W_init=self.initializer, use_bias=False)
-#
-#         self.output_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
-#
-#         self.layer_norm = nn.LayerNorm()
-#
-#
-#     def __call__(self, inputs, mask=None):
-#         """Fast multi-head self attention.
-#             :param inputs: tuple of (query_antecedent, memory_antecedent)
-#                 query_antecedent -> tensor w/ shape [batch_size, n_queries, channels]
-#                 memory_antecedent -> tensor w/ shape [batch_size, n_keyval, channels]
-#                 a Tensor with shape [batch_size, decoding_sequence_length, channels]
-#         """
-#         query_antecedent, memory_antecedent = inputs
-#         q = self.layer_norm(self.query_layer(query_antecedent))
-#         k = self.layer_norm(self.key_layer(memory_antecedent))
-#         v = self.layer_norm(self.value_layer(memory_antecedent))
-#
-#         attention_output = self.attention_layer((q, k, v), mask=mask)
-#         output = self.layer_norm(self.output_layer(attention_output))
-#         return output
+class MultiHeadAttention(nn.Module):
+    """
+    Fast multi-head attention. Based on the Attention is All You Need paper.
+    https://arxiv.org/pdf/1706.03762.pdf
+    """
+    n_heads : int
+    embed_dim : int
+    def setup(self):
+
+        self.qkv_proj = nn.Dense(3*self.embed_dim, kernel_init=nn.initializers.xavier_uniform(),use_bias = False)
+        
+
+        self.qa_channels, self.ma_channels = self.input_shapes
+        self.attention_layer = MultiHeadProjection(self.n_heads, self.input_shapes)
+        print(self.qa_channels, self.ma_channels)
+        assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \
+                                                        'Feature size must be divisible by n_heads'
+        assert self.qa_channels == self.ma_channels and 'Cannot combine tensors with different shapes'
+
+        self.initializer = nn.initializers.normal(0.02)
+
+        self.query_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+        self.key_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+        self.value_layer = nn.Dense(self.ma_channels, W_init=self.initializer, use_bias=False)
+
+        self.output_layer = nn.Dense(self.qa_channels, W_init=self.initializer, use_bias=False)
+
+        self.layer_norm = nn.LayerNorm()
+
+
+    def __call__(self, inputs, mask=None):
+        """Fast multi-head self attention.
+            :param inputs: tuple of (query_antecedent, memory_antecedent)
+                query_antecedent -> tensor w/ shape [batch_size, n_queries, channels]
+                memory_antecedent -> tensor w/ shape [batch_size, n_keyval, channels]
+                a Tensor with shape [batch_size, decoding_sequence_length, channels]
+        """
+        query_antecedent, memory_antecedent = inputs
+        q = self.layer_norm(self.query_layer(query_antecedent))
+        k = self.layer_norm(self.key_layer(memory_antecedent))
+        v = self.layer_norm(self.value_layer(memory_antecedent))
+
+        attention_output = self.attention_layer((q, k, v), mask=mask)
+        output = self.layer_norm(self.output_layer(attention_output))
+        return output
 
 class MultiHeadAttention(nn.Module):
-    embed_dim : int  # Output dimension
     num_heads : int  # Number of parallel heads (h)
+    embed_dim : int  # Output dimension
 
     def setup(self):
         # Stack all weight matrices 1...h and W^Q, W^K, W^V together for efficiency
@@ -336,7 +340,7 @@ class MultiHeadAttention(nn.Module):
         values = values.reshape(batch_size, seq_length, embed_dim)
         o = self.o_proj(values)
 
-        return o, attention
+        return o
 
 def scaled_dot_product(q, k, v, mask=None):
     d_k = q.shape[-1]
