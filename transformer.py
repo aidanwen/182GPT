@@ -70,7 +70,7 @@ class TransformerDecoder(nn.Module):
     def setup(self,
                  embed_size,
                  vocab_size,
-                 output_layer,
+                 # output_layer,
                  n_layers = 6,
                  n_heads = 8,
                  d_model = 512,
@@ -80,8 +80,8 @@ class TransformerDecoder(nn.Module):
         self.embed_size = embed_size
         self.token_embedding = nn.Embed(vocab_size, self.embed_size)
         self.pos_embedding = nn.Embed(d_model, self.embed_size)
-        
-        # self.output_layer = output_layer
+
+        self.output_layer = nn.Dense(vocab_size, use_bias=False)
 
         self.decoding_stack = []
         for i in range(n_layers):
