@@ -49,9 +49,8 @@ class MultiHeadProjection(nn.Module):
         """
 
         self.attention_map = AttentionQKV()
-        self.n_heads = n_heads
 
-        for size in feature_sizes:
+        for size in self.feature_sizes:
             assert size % self.n_heads == 0
 
     def __call__(self, inputs, mask=None):
@@ -103,8 +102,7 @@ class MultiHeadAttention(nn.Module):
     n_heads : int
     input_shapes : int
     def setup(self):
-        self.qa_channels, self.ma_channels = input_shapes
-        self.n_heads = n_heads
+        self.qa_channels, self.ma_channels = self.input_shapes
         self.attention_layer = MultiHeadProjection()
 
         assert self.qa_channels % self.n_heads == 0 and self.ma_channels % self.n_heads == 0 and \

@@ -20,10 +20,10 @@ class PositionEmbedding(nn.Module):
         seq_len = jnp.size(x,1)
 
         pe = jnp.zeros((seq_len, self.d_model))
-        position = np.arange(0, seq_len, dtype=np.float32)[:,None]
-        div_term = np.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
-        pe[:, 0::2] = np.sin(position * div_term)
-        pe[:, 1::2] = np.cos(position * div_term)
+        position = jnp.arange(0, seq_len, dtype=jnp.float32)[:,None]
+        div_term = jnp.exp(np.arange(0, self.d_model, 2) * (-math.log(10000.0) / self.d_model))
+        pe[:, 0::2] = jnp.sin(position * div_term)
+        pe[:, 1::2] = jnp.cos(position * div_term)
         pe = pe[None]
         self.pe = jax.device_put(pe)
 
@@ -96,26 +96,25 @@ class TransformerDecoder(nn.Module):
     dropout : float
     def setup(self):
 
-        self.embed_size = embed_size
-        self.token_embedding = nn.Embed(vocab_size, self.embed_size)
-        self.pos_embedding = PositionEmbedding(d_model, self.embed_size)
+        self.token_embedding = nn.Embed(self.vocab_size, self.embed_size)
+        self.pos_embedding = PositionEmbedding(self.d_model, self.embed_size)
         # self.pos_embedding = nn.Embed(d_model, self.embed_size)
 
-        self.output_layer = nn.Dense(vocab_size, use_bias=False)
+        self.output_layer = nn.Dense(self.vocab_size, use_bias=False)
 
         self.decoding_stack = []
-        for i in range(n_layers):
-            decoder = TransformerDecoderBlock(embed_size, n_heads, d_filter, d_model, dropout)
+        for i in range(self.n_layers):
+            decoder = TransformerDecoderBlock(self.embed_size, self.n_heads, self.d_filter, self.d_model, self.dropout)
             setattr(self,f"decoder{i}",decoder)
             self.decoding_stack.append(decoder)
-        self.output_layer = output_layer
-        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(d_model, d_model)), (1,1,d_model,d_model))
-        self.norm = nn.LayerNorm(embed_size)
-        self.drop = nn.Dropout(dropout)
+        # self.output_layer = output_layer
+        self.attention_mask = jnp.reshape(jnp.tril(jnp.ones(self.d_model, self.d_model)), (1,1,self.d_model,self.d_model))
+        self.norm = nn.LayerNorm(self.embed_size)
+        self.drop = nn.Dropout(self.dropout)
 
     # Self attention mask is a upper triangular mask to prevent attending to future targets + a padding mask
     # attention mask is just the padding mask
-    def __call__(self, input, fine_tine = False):
+    def __call__(self, input, fine_tune = False):
         """
             Args:
                 inputs: a tuple of (encoder_output, target_embedding)
